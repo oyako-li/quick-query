@@ -1,0 +1,41 @@
+{
+  "name": "quick-query",
+  "version": "1.0.0",
+  "description": "macOS shortcut app for quick query using Ollama",
+  "type": "module",
+  "main": "cmd.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "keywords": [
+    "electron",
+    "ollama",
+    "quick query"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "@xitanggg/node-selection": "^1.3.0",
+    "electron-store": "^11.0.2",
+    "node-get-selected-text": "^0.1.9",
+    "ollama": "^0.6.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron"
+    ]
+  },
+  "build": {
+    "appId": "com.ollama.translator",
+    "icon": "quick.png",
+    "mac": {
+      "category": "public.app-category.utilities",
+      "icon": "quick.png"
+    }
+  }
+}
