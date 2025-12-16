@@ -17,7 +17,8 @@ const store = new Store({
             { id: 'default', name: 'デフォルト', prompt: defaultPrompt }
         ],
         currentPromptId: 'default',
-        selectedModel: 'cogito:14b'
+        selectedModel: 'cogito:14b',
+        hotkey: 'CmdOrCtrl+V'
     }
 });
 
@@ -29,6 +30,8 @@ const savedPrompts = store.get('savedPrompts', []);
 const currentPrompt = savedPrompts.find(p => p.id === currentPromptId);
 let systemPrompt = currentPrompt ? currentPrompt.prompt : store.get('systemPrompt', defaultPrompt);
 let selectedModel = store.get('selectedModel', 'cogito:14b'); // 選択されたモデル
+let currentHotkey = store.get('hotkey', process.platform === 'darwin' ? 'Option+Z' : 'Alt+Z'); // 現在のショートカットキー
+let lastCmdCAt = 0; // ダブルクリック検出用
 
 function createWin() {
     win = new BrowserWindow({
@@ -40,7 +43,11 @@ function createWin() {
         resizable: true,
         skipTaskbar: false,
         visibleOnAllWorkspaces: true, // すべての仮想デスクトップ（スペース）に表示
-        webPreferences: { nodeIntegration: true, contextIsolation: false }
+        webPreferences: { 
+            nodeIntegration: true, 
+            contextIsolation: false,
+            webviewTag: true  // webviewタグを有効化
+        }
     });
 
     // メニューバーを作成
@@ -138,6 +145,11 @@ function createWin() {
             <button id="close-settings-btn" style="background:rgba(255,255,255,.1);border:none;color:#fff;cursor:pointer;padding:4px 12px;border-radius:6px;font-size:16px;">×</button>
           </div>
           <div style="margin-bottom:16px;">
+            <label style="display:block;font-size:12px;opacity:.7;margin-bottom:8px;">ショートカットキー</label>
+            <input type="text" id="hotkey-input" style="width:100%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:8px 12px;color:#fff;font-size:13px;box-sizing:border-box;" placeholder="例: Alt+Z, CmdOrCtrl+Shift+T" readonly>
+            <div style="font-size:10px;opacity:.6;margin-top:4px;">キーを押して設定（例: Alt+Z, CmdOrCtrl+Shift+T）</div>
+          </div>
+          <div style="margin-bottom:16px;">
             <label style="display:block;font-size:12px;opacity:.7;margin-bottom:8px;">Ollamaモデル</label>
             <select id="model-select" style="width:100%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:8px 12px;color:#fff;font-size:13px;box-sizing:border-box;">
             </select>
@@ -219,12 +231,17 @@ function createWin() {
             select.appendChild(option);
           });
         });
+        ipcRenderer.on("set-hotkey", (_, hotkey) => {
+          const input = document.getElementById("hotkey-input");
+          if (input) input.value = hotkey;
+        });
         // メニューバーから呼び出されるため、IPCイベントのみ待機
         ipcRenderer.on("open-settings", () => {
           document.getElementById("settings-modal").style.display = "block";
           ipcRenderer.send("get-system-prompt");
           ipcRenderer.send("get-saved-prompts");
           ipcRenderer.send("get-models");
+          ipcRenderer.send("get-hotkey");
         });
         document.getElementById("model-select").addEventListener("change", (e) => {
           ipcRenderer.send("select-model", e.target.value);
@@ -270,7 +287,71 @@ function createWin() {
           ipcRenderer.send("get-system-prompt");
           ipcRenderer.send("get-saved-prompts");
           ipcRenderer.send("get-models");
+          ipcRenderer.send("get-hotkey");
         });
+        // ショートカットキー入力欄のイベント
+        const hotkeyInput = document.getElementById("hotkey-input");
+        if (hotkeyInput) {
+          let isCapturing = false;
+          hotkeyInput.addEventListener("focus", () => {
+            isCapturing = true;
+            hotkeyInput.value = "キーを押してください...";
+            hotkeyInput.style.borderColor = "rgba(100,150,255,.8)";
+          });
+          hotkeyInput.addEventListener("blur", () => {
+            isCapturing = false;
+            hotkeyInput.style.borderColor = "rgba(255,255,255,.2)";
+          });
+          hotkeyInput.addEventListener("keydown", (e) => {
+            if (!isCapturing) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const parts = [];
+            if (e.metaKey) parts.push("Cmd");
+            if (e.ctrlKey) parts.push("Ctrl");
+            // macOSではAltキーはOptionキーとして扱う
+            if (e.altKey) {
+              const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0 || 
+                            (typeof process !== 'undefined' && process.platform === 'darwin');
+              parts.push(isMac ? "Option" : "Alt");
+            }
+            if (e.shiftKey) parts.push("Shift");
+            if (e.key && e.key.length === 1 && /[A-Za-z0-9]/.test(e.key)) {
+              parts.push(e.key.toUpperCase());
+            } else if (e.key === " ") {
+              parts.push("Space");
+            } else if (e.key.startsWith("Arrow")) {
+              parts.push(e.key.replace("Arrow", ""));
+            } else if (e.key === "Enter") {
+              parts.push("Enter");
+            } else if (e.key === "Tab") {
+              parts.push("Tab");
+            } else if (e.key === "Escape") {
+              parts.push("Escape");
+            } else if (e.key === "Backspace") {
+              parts.push("Backspace");
+            } else if (e.key === "Delete") {
+              parts.push("Delete");
+            } else if (e.key === "Home") {
+              parts.push("Home");
+            } else if (e.key === "End") {
+              parts.push("End");
+            } else if (e.key === "PageUp") {
+              parts.push("PageUp");
+            } else if (e.key === "PageDown") {
+              parts.push("PageDown");
+            } else if (e.key === "F1" || e.key.match(/^F[0-9]+$/)) {
+              parts.push(e.key);
+            } else {
+              return; // 認識できないキーは無視
+            }
+            if (parts.length === 0) return;
+            const hotkeyStr = parts.join("+");
+            hotkeyInput.value = hotkeyStr;
+            ipcRenderer.send("set-hotkey", hotkeyStr);
+            hotkeyInput.blur();
+          });
+        }
         document.getElementById("copy-btn").addEventListener("click", () => {
           ipcRenderer.send("copy-to-clipboard");
         });
@@ -654,32 +735,93 @@ app.whenReady().then(() => {
         console.log("[system-prompt] リセット:", systemPrompt);
     });
 
-    let lastCmdCAt = 0;
-
-    const ok = globalShortcut.register("Alt+C", async () => {
-        const now = Date.now();
-        const isDouble = (now - lastCmdCAt) < 350; // ここは好みで調整
-        lastCmdCAt = now;
-
-        if (!isDouble) return; // 1回目は何もしない（DeepLっぽさ）
-
-        showNearCursor("Querying...");
-
-        try {
-            const t = await copySelectedFresh(); // 下の関数
-            if (!t || !t.trim()) {
-            showNearCursor("テキストが選択されていません");
-            return;
-            }
-            const out = await translateWithOllama(t.trim());
-            showNearCursor(out);
-        } catch (e) {
-            showNearCursor(String(e));
-        }
+    // ショートカットキー関連のIPCハンドラー
+    ipcMain.on("get-hotkey", () => {
+        win.webContents.send("set-hotkey", currentHotkey);
     });
 
-    console.log("[hotkey] Alt+C register ok =", ok);
-    console.log("[hotkey] isRegistered =", globalShortcut.isRegistered("Alt+C"));
+    ipcMain.on("set-hotkey", (event, hotkey) => {
+        if (!hotkey || !hotkey.trim()) {
+            return;
+        }
+        registerHotkey(hotkey.trim());
+    });
+
+    // ショートカットキーを登録する関数
+    function registerHotkey(hotkey) {
+        // 既存のショートカットを解除（保存値から登録値に変換）
+        if (currentHotkey) {
+            let unregisterKey = currentHotkey;
+            if (process.platform === 'darwin') {
+                unregisterKey = currentHotkey.replace(/Option\+/gi, 'Alt+');
+            }
+            if (globalShortcut.isRegistered(unregisterKey)) {
+                globalShortcut.unregister(unregisterKey);
+                console.log("[hotkey] 解除:", unregisterKey, "(保存値:", currentHotkey, ")");
+            }
+        }
+
+        // macOSの場合はOptionをAltに変換（globalShortcutはAltを期待）
+        // 大文字小文字を区別せずに変換
+        let normalizedHotkey = hotkey;
+        if (process.platform === 'darwin') {
+            normalizedHotkey = hotkey.replace(/Option\+/gi, 'Alt+');
+        }
+
+        // 新しいショートカットを登録（エラーハンドリング付き）
+        let ok = false;
+        try {
+            ok = globalShortcut.register(normalizedHotkey, async () => {
+                const now = Date.now();
+                const isDouble = (now - lastCmdCAt) < 350; // ここは好みで調整
+                lastCmdCAt = now;
+
+                if (!isDouble) return; // 1回目は何もしない（DeepLっぽさ）
+
+                showNearCursor("Querying...");
+
+                try {
+                    const t = await copySelectedFresh(); // 下の関数
+                    if (!t || !t.trim()) {
+                        showNearCursor("テキストが選択されていません");
+                        return;
+                    }
+                    const out = await translateWithOllama(t.trim());
+                    showNearCursor(out);
+                } catch (e) {
+                    showNearCursor(String(e));
+                }
+            });
+        } catch (error) {
+            console.error("[hotkey] 登録エラー:", error);
+            ok = false;
+        }
+
+        if (ok) {
+            currentHotkey = hotkey;
+            store.set('hotkey', hotkey);
+            console.log("[hotkey] 登録成功:", normalizedHotkey, "(保存値:", hotkey, ")");
+            console.log("[hotkey] isRegistered =", globalShortcut.isRegistered(normalizedHotkey));
+        } else {
+            console.error("[hotkey] 登録失敗:", normalizedHotkey);
+            // 登録に失敗した場合は、エラーメッセージを表示してデフォルトに戻す
+            if (win && !win.isDestroyed()) {
+                win.webContents.send("set-text", `ショートカットキーの登録に失敗しました: ${hotkey}\nデフォルトに戻します。`);
+            }
+            const defaultHotkey = process.platform === 'darwin' ? 'Option+Z' : 'Alt+Z';
+            if (hotkey !== defaultHotkey) {
+                setTimeout(() => {
+                    registerHotkey(defaultHotkey);
+                    if (win && !win.isDestroyed()) {
+                        win.webContents.send("set-hotkey", defaultHotkey);
+                    }
+                }, 1000);
+            }
+        }
+    }
+
+    // 起動時に保存されたショートカットキーを登録
+    registerHotkey(currentHotkey);
 });
 
 // すべてのウィンドウが閉じられてもアプリを終了させない（macOSの場合）
