@@ -5,7 +5,7 @@
   "type": "module",
   "main": "cmd.js",
   "scripts": {
-    "start": "electron .",
+    "dev": "electron .",
     "build": "electron-builder"
   },
   "keywords": [

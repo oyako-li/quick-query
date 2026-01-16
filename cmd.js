@@ -14,11 +14,11 @@ const store = new Store({
     defaults: {
         systemPrompt: defaultPrompt,
         savedPrompts: [
-            { id: 'default', name: 'デフォルト', prompt: defaultPrompt }
+            { id: 'default', name: '翻訳', prompt: defaultPrompt }
         ],
         currentPromptId: 'default',
         selectedModel: 'cogito:14b',
-        hotkey: 'CmdOrCtrl+V'
+        hotkey: 'Alt+Z'
     }
 });
 
@@ -30,7 +30,7 @@ const savedPrompts = store.get('savedPrompts', []);
 const currentPrompt = savedPrompts.find(p => p.id === currentPromptId);
 let systemPrompt = currentPrompt ? currentPrompt.prompt : store.get('systemPrompt', defaultPrompt);
 let selectedModel = store.get('selectedModel', 'cogito:14b'); // 選択されたモデル
-let currentHotkey = store.get('hotkey', process.platform === 'darwin' ? 'Option+Z' : 'Alt+Z'); // 現在のショートカットキー
+let currentHotkey = store.get('hotkey', 'Alt+Z'); // 現在のショートカットキー
 let lastCmdCAt = 0; // ダブルクリック検出用
 
 function createWin() {
@@ -808,7 +808,7 @@ app.whenReady().then(() => {
             if (win && !win.isDestroyed()) {
                 win.webContents.send("set-text", `ショートカットキーの登録に失敗しました: ${hotkey}\nデフォルトに戻します。`);
             }
-            const defaultHotkey = process.platform === 'darwin' ? 'Option+Z' : 'Alt+Z';
+            const defaultHotkey = 'Alt+Z';
             if (hotkey !== defaultHotkey) {
                 setTimeout(() => {
                     registerHotkey(defaultHotkey);
@@ -820,6 +820,12 @@ app.whenReady().then(() => {
         }
     }
 
+    // 起動時に保存されたショートカットキーを確認し、Option+Zの場合はAlt+Zに統一
+    if (currentHotkey === 'Option+Z') {
+        currentHotkey = 'Alt+Z';
+        store.set('hotkey', 'Alt+Z');
+    }
+    
     // 起動時に保存されたショートカットキーを登録
     registerHotkey(currentHotkey);
 });
