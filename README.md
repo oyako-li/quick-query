@@ -1,6 +1,6 @@
-# Quick-Query - macOSショートカットアプリ
+# Quick-Query - クロスプラットフォームショートカットアプリ
 
-macOS用のクイックLLM質問アプリです。**Cmd+C+C**で選択したテキストをOllamaに送信し、即座に結果をポップアップで表示します。翻訳、要約、質問など、あらゆるLLMタスクをショートカットで素早く実行できます。
+macOS/Linux対応のクイックLLM質問アプリです。**ショートカットキー**で選択したテキストをOllamaに送信し、即座に結果をポップアップで表示します。翻訳、要約、質問など、あらゆるLLMタスクをショートカットで素早く実行できます。
 
 ## 主な特徴
 
@@ -33,7 +33,21 @@ npm install
 pnpm install
 ```
 
-### 2. Ollamaの起動確認
+### 2. Linux環境での追加セットアップ（Linuxユーザーのみ）
+
+Linux環境でテキスト選択機能を使用するには、以下のツールのいずれかが必要です:
+
+```bash
+# xdotoolをインストール（推奨）
+sudo apt-get install xdotool  # Debian/Ubuntu
+sudo yum install xdotool      # CentOS/RHEL
+sudo dnf install xdotool      # Fedora
+
+# または xselをインストール
+sudo apt-get install xsel     # Debian/Ubuntu
+```
+
+### 3. Ollamaの起動確認
 
 Ollamaがローカルで起動していることを確認してください:
 
@@ -42,7 +56,7 @@ Ollamaがローカルで起動していることを確認してください:
 ollama serve
 ```
 
-### 3. モデルのインストール（初回のみ）
+### 4. モデルのインストール（初回のみ）
 
 使用したいモデルをOllamaにインストール:
 
@@ -53,7 +67,7 @@ ollama pull llama2
 ollama pull mistral
 ```
 
-### 4. アプリを起動
+### 5. アプリを起動
 
 ```bash
 npm start
@@ -65,7 +79,9 @@ pnpm start
 
 1. **アプリを起動**（バックグラウンドで実行されます）
 2. **テキストを選択**（ブラウザ、エディタ、どこでも）
-3. **Cmd+C+Cを押す**（Cmd+Cを2回連続で押す）
+3. **ショートカットキーを押す**
+   - **macOS**: `Cmd+C+C`（Cmd+Cを2回連続で押す）または設定したショートカット（デフォルト: `Alt+Z`）
+   - **Linux**: 設定したショートカット（デフォルト: `Alt+Z`）
 4. **結果がポップアップで表示**されます
 
 ### 設定画面の使い方
@@ -122,7 +138,7 @@ LLMは自動的に`web_crawler`ツールを使用してWebページを取得し�
 
 ## ビルド
 
-macOSアプリとしてビルドする場合:
+アプリとしてビルドする場合:
 
 ```bash
 npm run build
@@ -131,6 +147,9 @@ pnpm run build
 ```
 
 ビルドされたアプリは `dist` ディレクトリに生成されます。
+
+- **macOS**: `.dmg` ファイルが生成されます
+- **Linux**: `AppImage`、`.deb`、`.rpm` ファイルが生成されます
 
 ## トラブルシューティング
 
@@ -158,6 +177,22 @@ npm install
 # または
 pnpm install
 ```
+
+### Linux環境でのOpenGLエラー
+
+Linux環境でOpenGL関連のエラーが発生する場合、以下の環境変数を設定してください:
+
+```bash
+export DISPLAY=:0
+# または、ハードウェアアクセラレーションを無効にする場合
+export ELECTRON_DISABLE_HARDWARE_ACCELERATION=1
+```
+
+### Linux環境でのテキスト選択が動作しない
+
+- `xdotool` または `xsel` がインストールされているか確認してください
+- アプリに適切な権限が付与されているか確認してください
+- X11環境で実行していることを確認してください（Waylandでは動作しない場合があります）
 
 ## ライセンス
 

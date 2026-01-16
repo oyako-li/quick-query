@@ -4,6 +4,28 @@ import { exec } from 'child_process';
 import { getSelectedText } from 'node-get-selected-text';
 import Store from 'electron-store';
 
+// Linux環境でのOpenGLエラーを回避するための設定
+if (process.platform === 'linux') {
+    // ハードウェアアクセラレーションを無効にする（必要に応じて）
+    // app.disableHardwareAcceleration();
+    
+    // または、特定のOpenGL設定を追加
+    app.commandLine.appendSwitch('use-gl', 'desktop');
+    app.commandLine.appendSwitch('disable-gpu-sandbox');
+    
+    // Pop OSなどの環境でウィンドウ管理を改善
+    // X11環境での表示設定
+    if (!process.env.DISPLAY) {
+        console.warn('[Linux] DISPLAY環境変数が設定されていません');
+    }
+    
+    // Wayland環境での動作を改善（Pop OSがWaylandを使用している場合）
+    if (process.env.WAYLAND_DISPLAY || process.env.XDG_SESSION_TYPE === 'wayland') {
+        console.log('[Linux] Wayland環境を検出しました');
+        // Wayland環境では、XWayland経由で動作するため、追加の設定は不要
+    }
+}
+
 const ollama = new Ollama({
     host: 'http://127.0.0.1:11434'
 });
@@ -49,6 +71,25 @@ function createWin() {
             webviewTag: true  // webviewタグを有効化
         }
     });
+    
+    // Linux環境（特にPop OS）でalwaysOnTopを確実に有効にする
+    if (process.platform === 'linux') {
+        // ウィンドウが表示された後に再度設定（Linux環境での確実な動作のため）
+        win.once('ready-to-show', () => {
+            win.setAlwaysOnTop(true);
+        });
+        
+        // ウィンドウが表示されるたびに再設定（Pop Shellなどの干渉を防ぐため）
+        win.on('show', () => {
+            setTimeout(() => {
+                // 複数回設定することで確実に前面に表示される
+                win.setAlwaysOnTop(true);
+                setTimeout(() => {
+                    win.setAlwaysOnTop(true);
+                }, 50);
+            }, 50);
+        });
+    }
 
     // メニューバーを作成
     const template = [
@@ -407,8 +448,102 @@ async function translateWithOllama(text) {
     return translatedText;
 }
 
-// AppleScriptでCopyコマンドを実行してクリップボードから選択テキストを取得
-async function getSelectionViaClipboard() {
+// Linux環境でのテキスト選択取得（xsel/xclip/xdotoolを使用）
+async function getSelectionViaClipboardLinux() {
+    return new Promise((resolve, reject) => {
+        // まず、xselのプライマリ選択バッファから直接取得を試す（最も確実）
+        exec('xsel -o -p 2>/dev/null', (error, stdout) => {
+            if (!error && stdout && stdout.trim()) {
+                const selectedText = stdout.trim();
+                console.log("[Linux] xselプライマリ選択バッファから取得成功");
+                resolve(selectedText);
+                return;
+            }
+            
+            // xselがエラーまたは空文字列を返した場合、xclipを試す
+            if (error) {
+                console.log("[Linux] xselが利用できません、xclipを試行");
+            } else {
+                console.log("[Linux] xselプライマリ選択バッファが空、xclipを試行");
+            }
+            
+            exec('xclip -o -selection primary 2>/dev/null', (error2, stdout2) => {
+                if (!error2 && stdout2 && stdout2.trim()) {
+                    const selectedText = stdout2.trim();
+                    console.log("[Linux] xclipプライマリ選択バッファから取得成功");
+                    resolve(selectedText);
+                    return;
+                }
+                
+                // xclipもエラーまたは空文字列を返した場合
+                if (error2) {
+                    console.log("[Linux] xclipも利用できません、xdotool経由でクリップボードを試行");
+                } else {
+                    console.log("[Linux] xclipプライマリ選択バッファも空、xdotool経由でクリップボードを試行");
+                }
+                
+                // クリップボード経由で取得を試みる（マーカー方式）
+                const oldClipboard = clipboard.readText();
+                // 一意のマーカーを生成（タイムスタンプ + ランダム文字列）
+                const marker = `__QUICK_QUERY_MARKER_${Date.now()}_${Math.random().toString(36).substring(7)}__`;
+                
+                // マーカーをクリップボードに書き込む
+                clipboard.writeText(marker);
+                
+                // xdotoolでCtrl+Cを送信
+                exec('xdotool key ctrl+c', (error3) => {
+                    if (error3) {
+                        // xdotoolも利用できない場合、クリップボードを復元
+                        clipboard.writeText(oldClipboard);
+                        reject(new Error("Linux環境でのテキスト選択取得に失敗しました。xdotool、xsel、またはxclipのインストールが必要です。"));
+                        return;
+                    }
+                    
+                    // クリップボードの内容を取得（少し待機してから）
+                    setTimeout(() => {
+                        let clipboardContents = clipboard.readText();
+                        let attempts = 0;
+                        const maxAttempts = 20;
+                        
+                        // マーカーが消えるまで待機（= Ctrl+Cが実行されてクリップボードが更新されるまで）
+                        const checkClipboard = () => {
+                            clipboardContents = clipboard.readText();
+                            
+                            // マーカーがまだ残っている場合
+                            if (clipboardContents === marker && attempts < maxAttempts) {
+                                attempts++;
+                                setTimeout(checkClipboard, 100);
+                            } else if (clipboardContents === marker) {
+                                // タイムアウト：マーカーが消えなかった = テキストが選択されていない
+                                clipboard.writeText(oldClipboard);
+                                reject(new Error("テキストが選択されていません"));
+                            } else {
+                                // 成功：マーカーが消えた = クリップボードが更新された
+                                const selectedText = clipboardContents;
+                                
+                                if (selectedText && selectedText.trim()) {
+                                    // 元のクリップボードを復元
+                                    clipboard.writeText(oldClipboard);
+                                    console.log("[Linux] xdotool経由でクリップボードから取得成功");
+                                    resolve(selectedText.trim());
+                                } else {
+                                    // クリップボードが空になった場合も、元のクリップボードを復元
+                                    clipboard.writeText(oldClipboard);
+                                    reject(new Error("テキストが選択されていません"));
+                                }
+                            }
+                        };
+                        
+                        checkClipboard();
+                    }, 200);
+                });
+            });
+        });
+    });
+}
+
+// macOS用：AppleScriptでCopyコマンドを実行してクリップボードから選択テキストを取得
+async function getSelectionViaClipboardMacOS() {
     return new Promise((resolve, reject) => {
         // クリップボードの現在の内容を保存
         const oldClipboard = clipboard.readText();
@@ -482,25 +617,64 @@ async function getSelectionViaClipboard() {
     });
 }
 
+// プラットフォームに応じたテキスト選択取得関数
+async function getSelectionViaClipboard() {
+    if (process.platform === 'linux') {
+        return getSelectionViaClipboardLinux();
+    } else if (process.platform === 'darwin') {
+        return getSelectionViaClipboardMacOS();
+    } else {
+        // Windowsやその他のプラットフォーム
+        throw new Error(`未対応のプラットフォーム: ${process.platform}`);
+    }
+}
+
 async function copySelectedFresh() {
-    // まず直接取得を試す
+    // Linux環境では、node-get-selected-textが正しく動作しない可能性があるため、
+    // 直接Linux用の方法を使用する
+    if (process.platform === 'linux') {
+        try {
+            const selectedText = await getSelectionViaClipboardLinux();
+            if (selectedText && selectedText.trim()) {
+                console.log("[Linux] テキスト選択取得成功");
+                return selectedText.trim();
+            } else {
+                throw new Error("テキストが選択されていません");
+            }
+        } catch (error) {
+            console.error("[Linux] テキスト選択取得エラー:", error.message);
+            throw error;
+        }
+    }
+    
+    // macOS環境では、まず直接取得を試す
     try {
         const selectedText = getSelectedText();
-        console.log("[getSelectedText] 直接取得成功");
         if (selectedText && selectedText.trim()) {
+            console.log("[getSelectedText] 直接取得成功");
             return selectedText.trim();
+        } else {
+            console.log("[getSelectedText] 直接取得は成功したが、テキストが空です。クリップボード経由を試行");
         }
     } catch (error) {
         console.log("[getSelectedText] 直接取得失敗、クリップボード経由を試行:", error.message);
     }
     
-    // フォールバック：クリップボード経由で取得
+    // フォールバック：クリップボード経由で取得（macOS用）
     try {
-        const selectedText = await getSelectionViaClipboard();
-        console.log("[getSelectionViaClipboard] クリップボード経由で取得成功");
-        return selectedText;
+        const selectedText = await getSelectionViaClipboardMacOS();
+        if (selectedText && selectedText.trim()) {
+            console.log("[getSelectionViaClipboard] クリップボード経由で取得成功");
+            return selectedText.trim();
+        } else {
+            throw new Error("テキストが選択されていません");
+        }
     } catch (error) {
         console.error("[getSelectionViaClipboard] error:", error);
+        // エラーメッセージが既に適切な場合はそのまま、そうでない場合は統一
+        if (error.message && error.message.includes("テキストが選択されていません")) {
+            throw error;
+        }
         throw new Error("テキストが選択されていません");
     }
 }
@@ -556,6 +730,18 @@ function showNearCursor(text) {
     // macOSでは、非表示→設定→位置変更→表示の順序が重要
     setTimeout(() => {
         win.showInactive(); // フォーカス奪わない
+        
+        // Linux環境（特にPop OS）でalwaysOnTopを確実に有効にする
+        if (process.platform === 'linux') {
+            // 表示後に再度設定（Pop Shellなどの干渉を防ぐため）
+            setTimeout(() => {
+                // 複数回設定することで確実に前面に表示される
+                win.setAlwaysOnTop(true);
+                setTimeout(() => {
+                    win.setAlwaysOnTop(true);
+                }, 50);
+            }, 100);
+        }
     }, 10);
 }
 

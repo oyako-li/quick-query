@@ -1,7 +1,7 @@
 {
   "name": "quick-query",
   "version": "1.0.0",
-  "description": "macOS shortcut app for quick query using Ollama",
+  "description": "Cross-platform shortcut app for quick query using Ollama (macOS/Linux)",
   "type": "module",
   "main": "cmd.js",
   "scripts": {
@@ -13,7 +13,10 @@
     "ollama",
     "quick query"
   ],
-  "author": "",
+  "author": {
+    "name": "Oyako",
+    "email": "oyakoli3@gmail.com"
+  },
   "license": "MIT",
   "devDependencies": {
     "electron": "^28.0.0",
@@ -36,6 +39,15 @@
     "mac": {
       "category": "public.app-category.utilities",
       "icon": "quick.png"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility",
+      "icon": "quick.png",
+      "maintainer": "oyakoli3@gmail.com"
     }
   }
 }
