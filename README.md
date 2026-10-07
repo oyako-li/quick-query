@@ -8,7 +8,7 @@
 
 ## 必要なもの
 
-- macOS、Node.js 20 以上、Xcode Command Line Tools（`swiftc`）
+- macOS、Node.js 22 以上（`.nvmrc` あり。20.19 未満だと `npm run dist` が ERR_REQUIRE_ESM で失敗する）、Xcode Command Line Tools（`swiftc`）
 - Ollama が起動していて、モデルを取得済み（例: `ollama pull gemma3`）
 
 ## 開発

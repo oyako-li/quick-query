@@ -11,7 +11,7 @@ let draftNew = false
 // ---------- 状態 ----------
 function renderStatus(s: AppStatus): void {
   const items: [boolean, string][] = [
-    [s.watcher === 'ready', s.watcher === 'ready' ? 'キー監視: 有効' : s.watcher === 'no-permission' ? 'キー監視: 入力監視の許可が必要' : 'キー監視: 起動中'],
+    [s.watcher === 'ready', s.watcher === 'ready' ? 'キー監視: 有効' : s.watcher === 'no-permission' ? 'キー監視: 入力監視の許可が必要' : s.watcher === 'stopped' ? 'キー監視: ヘルパーを起動できません' : 'キー監視: 起動中'],
     [s.ollama.ok, s.ollama.ok ? 'Ollama: 接続OK' : `Ollama: 未接続${s.ollama.error ? ` (${s.ollama.error})` : ''}`]
   ]
   $('status').replaceChildren(

@@ -62,6 +62,12 @@ app.whenReady().then(() => {
         setStatus({ watcher: 'ready' })
         break
       case 'error':
+        if (ev.code.startsWith('spawn-failed')) {
+          // 権限ではなく、ヘルパーを起動できない (同梱漏れ・実行権限など)
+          console.error('[keywatch]', ev.code)
+          setStatus({ watcher: 'stopped' })
+          break
+        }
         setStatus({ watcher: 'no-permission' })
         if (!permissionRetry) permissionRetry = setInterval(startWatcher, 3000)
         if (!shownPermissionHelp) {

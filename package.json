@@ -35,8 +35,14 @@
       "out/**"
     ],
     "extraResources": [
-      "resources/keywatch",
-      "resources/icon.png"
+      {
+        "from": "resources/keywatch",
+        "to": "keywatch"
+      },
+      {
+        "from": "resources/icon.png",
+        "to": "icon.png"
+      }
     ],
     "mac": {
       "category": "public.app-category.utilities",
@@ -49,5 +55,8 @@
         "NSInputMonitoringUsageDescription": "Cmd+C+C を検知するためにキー入力の監視が必要です。"
       }
     }
+  },
+  "engines": {
+    "node": ">=20.19 || >=22.12"
   }
 }
