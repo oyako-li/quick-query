@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quick Query 設定</title>
+    <link rel="stylesheet" href="./settings.css" />
+  </head>
+  <body>
+    <header class="page-head">
+      <h1>Quick Query</h1>
+      <p class="muted">テキストを選択して <kbd>⌘</kbd><kbd>C</kbd><kbd>C</kbd> でローカル LLM に質問</p>
+    </header>
+
+    <h2>状態</h2>
+    <div class="card">
+      <ul id="status" class="status"></ul>
+      <div id="perm-box" class="notice" hidden>
+        <p>
+          システム設定 › プライバシーとセキュリティ › <b>入力監視</b> で、このアプリ（開発中は Electron またはターミナル）を許可してください。許可すると自動で有効になります。
+        </p>
+        <button id="open-pane" class="primary">入力監視の設定を開く</button>
+      </div>
+    </div>
+
+    <h2>一般</h2>
+    <div class="card">
+      <div class="row">
+        <div class="label">モデル<small>Ollama のモデル</small></div>
+        <div class="control"><select id="model"></select></div>
+      </div>
+      <p id="model-error" class="err pad" hidden></p>
+      <div class="row">
+        <div class="label">Ollama ホスト</div>
+        <div class="control"><input id="host" type="url" /></div>
+      </div>
+      <div class="row">
+        <div class="label">⌘C+C の間隔<small>2回目までの許容時間 (ms)</small></div>
+        <div class="control"><input id="interval" type="number" min="150" max="1000" step="50" class="short" /></div>
+      </div>
+      <div class="row">
+        <div class="label">入力の最大文字数<small>超過分は切り捨て</small></div>
+        <div class="control"><input id="maxchars" type="number" min="200" max="100000" step="100" class="short" /></div>
+      </div>
+      <div class="row">
+        <div class="label">⌘C+C を有効にする</div>
+        <div class="control"><label class="switch"><input id="enabled" type="checkbox" /><span></span></label></div>
+      </div>
+      <div class="row">
+        <div class="label">ログイン時に起動</div>
+        <div class="control"><label class="switch"><input id="login" type="checkbox" /><span></span></label></div>
+      </div>
+    </div>
+
+    <h2>プロンプト</h2>
+    <div class="card prompts">
+      <aside>
+        <ul id="prompt-list"></ul>
+        <button id="p-new" class="add">＋ 新規</button>
+      </aside>
+      <div class="editor">
+        <label class="stack">名前 <input id="p-name" /></label>
+        <label class="stack">System プロンプト <textarea id="p-system" rows="5"></textarea></label>
+        <label class="stack">
+          User テンプレート <small class="muted"><code>{{text}}</code> が選択テキストに置換されます</small>
+          <textarea id="p-user" rows="4"></textarea>
+        </label>
+        <p id="p-msg" class="muted msg"></p>
+        <div class="actions">
+          <button id="p-del" class="danger">削除</button>
+          <button id="p-reset" hidden>初期値に戻す</button>
+          <span class="grow"></span>
+          <button id="p-dup">複製</button>
+          <button id="p-use">これを使う</button>
+          <button id="p-save" class="primary">保存</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="./settings.ts"></script>
+  </body>
+</html>
