@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quick Query</title>
+    <link rel="stylesheet" href="./popup.css" />
+  </head>
+  <body>
+    <main id="card">
+      <header>
+        <button id="prompt-btn" class="nodrag" title="プロンプトを切り替える">プロンプト ▾</button>
+        <span id="model"></span>
+        <span class="spacer"></span>
+        <button class="nodrag" id="settings" title="設定を開く">⚙</button>
+        <button class="nodrag" id="copy" title="結果をコピー (Cmd+Shift+C)" disabled>コピー</button>
+        <button class="nodrag" id="close" title="閉じる (Esc)">✕</button>
+      </header>
+      <div id="scroll"><div id="flow">
+      <ul id="prompt-menu" class="nodrag" hidden></ul>
+      <div id="input-preview" hidden></div>
+      <section id="body"></section>
+      <div id="notice" hidden></div>
+      <div id="error" hidden>
+        <p id="error-msg"></p>
+        <p id="error-hint"></p>
+        <button id="error-action" hidden></button>
+      </div>
+      <footer id="meta" hidden></footer>
+      </div></div>
+    </main>
+    <script type="module" src="./popup.ts"></script>
+  </body>
+</html>
