@@ -1,4 +1,5 @@
 import { Ollama } from 'ollama'
+import { createHostOverrideFetch, resolveHostHeader } from './hostOverrideFetch'
 
 export type LlmErrorKind = 'unreachable' | 'model-missing' | 'aborted' | 'other'
 
@@ -24,14 +25,29 @@ export function classifyError(e: unknown, signal?: AbortSignal): LlmError {
 
 export class LlmService {
   private client: Ollama
-  constructor(private host: string) {
-    this.client = new Ollama({ host })
+  private key: string
+
+  constructor(
+    private host: string,
+    private localhostHostHeader = true
+  ) {
+    this.key = `${host}|${localhostHostHeader}`
+    this.client = this.make()
   }
 
-  setHost(host: string): void {
-    if (host === this.host) return
+  private make(): Ollama {
+    const hostHeader = resolveHostHeader(this.host, this.localhostHostHeader)
+    return new Ollama({ host: this.host, ...(hostHeader ? { fetch: createHostOverrideFetch(hostHeader) } : {}) })
+  }
+
+  /** 接続先の設定を反映する。変更が無ければ何もしない */
+  configure(host: string, localhostHostHeader: boolean): void {
+    const key = `${host}|${localhostHostHeader}`
+    if (key === this.key) return
+    this.key = key
     this.host = host
-    this.client = new Ollama({ host })
+    this.localhostHostHeader = localhostHostHeader
+    this.client = this.make()
   }
 
   async listModels(): Promise<string[]> {

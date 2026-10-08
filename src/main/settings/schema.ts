@@ -15,6 +15,7 @@ export const DEFAULT_SETTINGS: Settings = {
   version: 1,
   model: '',
   ollamaHost: 'http://127.0.0.1:11434',
+  localhostHostHeader: true,
   currentPromptId: 'translate',
   prompts: BUILTIN_PROMPTS,
   trigger: { enabled: true, doubleCopyMs: 400 },
@@ -25,6 +26,7 @@ export const DEFAULT_SETTINGS: Settings = {
 const FieldSchemas = {
   model: z.string(),
   ollamaHost: z.string().url(),
+  localhostHostHeader: z.boolean(),
   currentPromptId: z.string(),
   trigger: z.object({ enabled: z.boolean(), doubleCopyMs: z.number().int().min(150).max(1000) }),
   maxInputChars: z.number().int().min(200).max(100_000),

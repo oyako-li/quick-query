@@ -56,11 +56,13 @@ function bindGeneral(): void {
   const interval = $<HTMLInputElement>('interval')
   const maxchars = $<HTMLInputElement>('maxchars')
   const enabled = $<HTMLInputElement>('enabled')
+  const hosthdr = $<HTMLInputElement>('hosthdr')
   const login = $<HTMLInputElement>('login')
   host.value = settings.ollamaHost
   interval.value = String(settings.trigger.doubleCopyMs)
   maxchars.value = String(settings.maxInputChars)
   enabled.checked = settings.trigger.enabled
+  hosthdr.checked = settings.localhostHostHeader
   login.checked = settings.launchAtLogin
 
   $('model').addEventListener('change', (e) => void patch({ model: (e.target as HTMLSelectElement).value }))
@@ -79,6 +81,11 @@ function bindGeneral(): void {
     maxchars.value = String(settings.maxInputChars)
   })
   enabled.addEventListener('change', () => void patch({ trigger: { ...settings.trigger, enabled: enabled.checked } }))
+  hosthdr.addEventListener('change', async () => {
+    await patch({ localhostHostHeader: hosthdr.checked })
+    void loadModels()
+    renderStatus(await qq.getStatus())
+  })
   login.addEventListener('change', () => void patch({ launchAtLogin: login.checked }))
 }
 

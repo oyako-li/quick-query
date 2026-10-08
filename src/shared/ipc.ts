@@ -12,6 +12,8 @@ export type Settings = {
   version: 1
   model: string
   ollamaHost: string
+  /** リモート Ollama が Host 検査で 403 を返すときのため、Host: localhost を付ける */
+  localhostHostHeader: boolean
   currentPromptId: string
   prompts: Prompt[]
   trigger: { enabled: boolean; doubleCopyMs: number }
