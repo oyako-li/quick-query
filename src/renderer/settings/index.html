@@ -36,6 +36,10 @@
         <div class="control"><input id="host" type="url" /></div>
       </div>
       <div class="row">
+        <div class="label">リモートで Host を localhost にする<small>Tailscale 等の別マシンの Ollama が 403 のとき（localhost 宛てには付けません）</small></div>
+        <div class="control"><label class="switch"><input id="hosthdr" type="checkbox" /><span></span></label></div>
+      </div>
+      <div class="row">
         <div class="label">⌘C+C の間隔<small>2回目までの許容時間 (ms)</small></div>
         <div class="control"><input id="interval" type="number" min="150" max="1000" step="50" class="short" /></div>
       </div>

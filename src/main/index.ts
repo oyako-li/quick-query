@@ -24,7 +24,7 @@ const resourcePath = (name: string) =>
 
 app.whenReady().then(() => {
   const settings = new SettingsStore()
-  const llm = new LlmService(settings.get().ollamaHost)
+  const llm = new LlmService(settings.get().ollamaHost, settings.get().localhostHostHeader)
   const popup = new PopupWindow()
   const watcher = new KeyWatcher(resourcePath('keywatch'))
   const detector = new DoubleCopyDetector({ intervalMs: () => settings.get().trigger.doubleCopyMs })
@@ -41,7 +41,7 @@ app.whenReady().then(() => {
 
   async function refreshOllama(): Promise<void> {
     try {
-      llm.setHost(settings.get().ollamaHost)
+      llm.configure(settings.get().ollamaHost, settings.get().localhostHostHeader)
       await llm.listModels()
       setStatus({ ollama: { ok: true } })
     } catch (e) {
@@ -92,7 +92,7 @@ app.whenReady().then(() => {
   // ---- IPC ----
   const applySettings = (patch: Partial<Settings>): Settings => {
     const next = settings.update(patch)
-    llm.setHost(next.ollamaHost)
+    llm.configure(next.ollamaHost, next.localhostHostHeader)
     app.setLoginItemSettings({ openAtLogin: next.launchAtLogin })
     setStatus({ paused: !next.trigger.enabled })
     return next

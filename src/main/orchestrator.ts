@@ -92,7 +92,7 @@ export class Orchestrator {
     const inputPreview = raw.length > 40 ? `${raw.slice(0, 40)}…` : raw
 
     // 2. モデル解決
-    llm.setHost(s.ollamaHost)
+    llm.configure(s.ollamaHost, s.localhostHostHeader)
     let model = s.model
     try {
       if (!model) {
